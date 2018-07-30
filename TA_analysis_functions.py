@@ -515,26 +515,30 @@ def svd_noise_corr(input_maps, threshold=15):
 		reconstructed_array.append(reconstructed[:,i])
 	
 	for i in range(0,len(reconstructed_array)): 
-		reconstructed_array[i] = reconstructed_array[i].reshape(input_maps[1].shape[0],input_maps[1].shape[1], order='F')
+		reconstructed_array[i] = reconstructed_array[i].reshape(input_maps[i].shape[0],input_maps[i].shape[1], order='F')
 	
 	return reconstructed_array
 
 
 def average_scan(input_maps):
+	'''
+	Input: List of scans that should be averaged
+	Ouput: Averaged map
+	'''
 	return np.mean(input_maps,axis=0)
 
 def baseline_corr(scan_map, wavelength_list, x_min, x_max, wl_min, wl_max):
-        y_min = find_closest_index(wavelength_list, wl_min)
-        y_max = find_closest_index(wavelength_list, wl_max)
-        
-        if y_min < y_max:
-            noise = np.mean(scan_map[x_min:x_max, y_min:y_max])
-            noise_corr = scan_map - noise
-        else:
-            noise = np.mean(scan_map[x_min:x_max, y_max:y_min])
-            noise_corr = scan_map - noise
-            
-        return noise_corr
+		y_min = find_closest_index(wavelength_list, wl_min)
+		y_max = find_closest_index(wavelength_list, wl_max)
+		
+		if y_min < y_max:
+			noise = np.mean(scan_map[x_min:x_max, y_min:y_max])
+			noise_corr = scan_map - noise
+		else:
+			noise = np.mean(scan_map[x_min:x_max, y_max:y_min])
+			noise_corr = scan_map - noise
+			
+		return noise_corr
 
 def automatic_parity_corr(maps,x_window=0.01,z_percentage=0.5):
 	'''
@@ -703,44 +707,76 @@ def GVD_correction(scan_map,timesteps,wavelength_list,hws=4,order=6):
 EXPORT Options
 '''
 def create_optimus_file(input_map,times,wavelength,outputname):
-    '''
-    For optimus, .ana files are needed. The information is provided after
-    keyword in a space-separated form. 
-    
-    We noticed that it is important that the order of the times and wavelengths 
-    is correct.
-    
-    Input:
-        (1) Input map, the code here assumes that the map is in such a form that the x dimension 
-            is the time, and the y dimension is the wavelength and that the ordering in both dimensions 
-            corresponds to the one provided in the wavelength and time lists as the map will be flipped 
-            assuming that this is true. 
-        (2) Timelist
-        (3) Wavelength
-        
-    Ouput: 
-        .ana file for optimus
-    '''
-    assert (len(wavelength) == input_map.shape[0]), "Somehow the shape of the map is not consistent with the number of wavelengths" 
-    assert (len(times) == input_map.shape[1]), "Somehow the shape of the map is not consistent with the number of delays" 
-    
-    if wavelength[0] > wavelength[-1]:
-        wavelength = wavelength[::-1]
-        input_map  = np.flipud(input_map)
-        
-    if times[0] > times[-1]:
-        times = times[::-1]
-        input_map = np.fliplr(input_map)
-    
-    filename = str(outputname) +  ".ana"
-    with open(filename, "w") as f_handle:
-        f_handle.write("%FILENAME="+filename[:-4]+"\n")
-        f_handle.write("%DATATYPE=TAVIS\n")
-        f_handle.write("%TIMESCALE=ps\n")
-        f_handle.write("%TIMELIST=")
-        np.savetxt(f_handle, times)
-        f_handle.write("%WAVELENGTHLIST=")
-        np.savetxt(f_handle, wavelength)
-        f_handle.write("%INTENSITYMATRIX=\n")
-        np.savetxt(f_handle, input_map)
-    f_handle.close()
+	'''
+	For optimus, .ana files are needed. The information is provided after
+	keyword in a space-separated form. 
+	
+	We noticed that it is important that the order of the times and wavelengths 
+	is correct.
+	
+	Input:
+		(1) Input map, the code here assumes that the map is in such a form that the x dimension 
+			is the time, and the y dimension is the wavelength and that the ordering in both dimensions 
+			corresponds to the one provided in the wavelength and time lists as the map will be flipped 
+			assuming that this is true. 
+		(2) Timelist
+		(3) Wavelength
+		
+	Ouput: 
+		.ana file for optimus
+	'''
+	assert (len(wavelength) == input_map.shape[0]), "Somehow the shape of the map is not consistent with the number of wavelengths" 
+	assert (len(times) == input_map.shape[1]), "Somehow the shape of the map is not consistent with the number of delays" 
+	
+	if wavelength[0] > wavelength[-1]:
+		wavelength = wavelength[::-1]
+		input_map  = np.flipud(input_map)
+		
+	if times[0] > times[-1]:
+		times = times[::-1]
+		input_map = np.fliplr(input_map)
+	
+	filename = str(outputname) +  ".ana"
+	with open(filename, "w") as f_handle:
+		f_handle.write("%FILENAME="+filename[:-4]+"\n")
+		f_handle.write("%DATATYPE=TAVIS\n")
+		f_handle.write("%TIMESCALE=ps\n")
+		f_handle.write("%TIMELIST=")
+		np.savetxt(f_handle, times)
+		f_handle.write("%WAVELENGTHLIST=")
+		np.savetxt(f_handle, wavelength)
+		f_handle.write("%INTENSITYMATRIX=\n")
+		np.savetxt(f_handle, input_map)
+	f_handle.close()
+
+
+def create_pyldm_file(input_map, times, wavelength, outputname):
+	'''
+	Creates maps in a form as they are needed for pyLDM. PyLDM wants one large 
+	matrix in the format 
+
+		WL 1, WL 2, ...
+	t1,data1,data2, ...
+	t2,data3,data3, ...
+	
+	Input:
+		(1) Input map, the code here assumes that the map is in such a form that the x dimension 
+			is the time, and the y dimension is the wavelength and that the ordering in both dimensions 
+			corresponds to the one provided in the wavelength and time lists
+		(2) Timelist
+		(3) Wavelength
+		
+	Ouput: 
+		PyLDM input file (.txt ending)
+	'''
+	
+	assert (len(wavelength) == input_map.shape[0]), "Somehow the shape of the map is not consistent with the number of wavelengths" 
+	assert (len(times) == input_map.shape[1]), "Somehow the shape of the map is not consistent with the number of delays" 
+	
+	wavelengths_plydm = np.hstack([[0], wavelength])
+	pyldm_array2 = np.vstack([times, input_map]) 
+	pyldm_array2_2 = np.zeros((input_map.shape[0]+1, input_map.shape[1]+1))
+	pyldm_array2_2[:,0] = wavelengths_plydm
+	pyldm_array2_2[:,1:] = pyldm_array2
+	filename = str(outputname) + ".txt"
+	np.savetxt(filename, pyldm_array2_2.T, delimiter=",")
