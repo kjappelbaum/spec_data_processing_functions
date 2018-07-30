@@ -67,7 +67,9 @@ usage = """ This is a collection of functions that might be helpful
 				use a appropiate conversion, e.g. via length and speed of light)
 			(7) plot corrected map, timetraces and spectral cuts for first impressions 
 			(8) do global analysis (to be implemented) or export into Optimus or PyLDM for 
-				global and target analysis or LDA. """
+				global and target analysis or LDA. 
+
+			Extension into analysis classes is planned."""
 
 print(usage)
 
@@ -75,6 +77,13 @@ print(usage)
 '''
 AUXILLARY, GENERAL FUNCTIONS
 '''
+
+def gaussian(x, amp, cen, wid):
+	return (amp / (np.sqrt(2*np.pi) * wid)) * np.exp(-(x-cen)**2 / (2*wid**2) )
+	
+def FWHM(sigma):
+	return 2.55*sigma
+
 def find_closest_index(your_list, your_value):
 	'''
 	Find the index closest to the value.
@@ -531,9 +540,9 @@ def svd_noise_corr(input_maps, threshold=15):
 		1. van Stokkum, I. H. M., Larsen, D. S. & van Grondelle, 
 		R. Global and target analysis of time-resolved spectra. 
 		Biochim. Biophys. Acta - Bioenerg. 1657, 82–104 (2004).
-		2. 1. van Stokkum, I. H. M., Larsen, D. S. & van Grondelle, R. 
-		Global and target analysis of time-resolved spectra. 
-		Biochim. Biophys. Acta - Bioenerg. 1657, 82–104 (2004).
+		2. Ruckebusch, C., Sliwa, M., Pernot, P., de Juan, A. & Tauler, R. 
+		Comprehensive data analysis of femtosecond transient absorption spectra: A review. 
+		J. Photochem. Photobiol. C Photochem. Rev. 13, 1–27 (2012).
 	'''
 	
 	noise_anal_array= []
@@ -708,6 +717,12 @@ def GVD_correction(scan_map,timesteps,wavelength_list,hws=4,order=6):
 	Output: 
 		(1) GVD corrected map
 		(2) New list of delays
+
+	Reference: 
+		For idea behind GVD correction, consult e.g. 
+		1. Ruckebusch, C., Sliwa, M., Pernot, P., de Juan, A. & Tauler, R. 
+		Comprehensive data analysis of femtosecond transient absorption spectra: A review. 
+		J. Photochem. Photobiol. C Photochem. Rev. 13, 1–27 (2012).
 	'''
 	x_dim = len(timesteps)
 	y_len = len(wavelength_list)
@@ -835,3 +850,57 @@ def create_pyldm_file(input_map, times, wavelength, outputname):
 	pyldm_array2_2[:,1:] = pyldm_array2
 	filename = str(outputname) + ".txt"
 	np.savetxt(filename, pyldm_array2_2.T, delimiter=",")
+
+
+
+'''
+SPECIAL CASES
+'''
+
+
+def fit_IRF(scan_map, delays, wavelengths, starting_values = [0.003, 1843, 0.55]):
+	'''
+	Assuming that you measure e.g. the two-photon absorption 
+	in EtOH. Fits Gaussian at each wavelength to this signal and return the FWHMs. 
+
+	This value should be used for convolution with the fitting function in 
+	further analysis (LDA, global analysis ...) or for comparison with the value 
+	that PyLDM or Optimus returns. 
+
+	Input: 
+		(1) Map of IRF measurement (preprocessed)
+		(2) Delays
+		(3) list of wavelengths
+		(4) List of starting values for your Gaussian. In following order:
+		pre-factor (amp), center (cen) (depends of course
+		of the units of delay you choose), width (wid):
+		(amp / (np.sqrt(2*np.pi) * wid)) * np.exp(-(x-cen)**2 / (2*wid**2) )
+	'''
+
+	widths = []
+	pos = []
+	for i in range(0,scan_map.shape[0]):
+		popt, pcov = curve_fit(gaussian, delays, scan_map[i,:], p0 = [0.003, 1843, 0.55])
+		widths.append(FWHM(popt[2]))
+		pos.append(popt[1])
+
+	trace= go.Scatter(
+			x = wavelengths,
+			y = widths, 
+			)
+
+	layout = go.Layout(
+					showlegend=True,
+					title = "IRF fit",
+					xaxis=dict(
+						title='wavelength / nm',
+					),
+					yaxis=dict(
+						title='FWHM',
+					)
+			   )
+	fig = go.Figure(data=[trace], layout=layout)
+	py.iplot(fig)
+
+	return widths
+
