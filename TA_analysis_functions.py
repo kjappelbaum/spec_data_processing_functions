@@ -140,6 +140,7 @@ def import_delay(path, pattern, debug=False):
 		
 	return filename_list, save_list
 
+
 def split_anisotropy(input_list):
 	'''
 	Takes a list of scans which were performed with alternating 
@@ -159,7 +160,6 @@ def split_anisotropy(input_list):
 	return pol_a, pol_b 
 
 
-
 def create_maps(input_list_OD, input_list_delays, numberpixel=512):
 	'''
 	Input data:
@@ -173,6 +173,7 @@ def create_maps(input_list_OD, input_list_delays, numberpixel=512):
 	Returns:
 		Reshaped version of (1)
 	'''
+	assert  (numberpixel > 0), "Where are your pixels?"
 	timesteps = []
 	for i in range(0,len(input_list_delays)):
 		timesteps.append(input_list_delays[i].Delay)
@@ -353,7 +354,7 @@ def plot_timetrace(wl, wl_list, data, normalize=False, plottype="linear"):
 						type = plottype,
 					),
 					yaxis=dict(
-						title='mOD',
+						title='Δ OD',
 					)
 			   )
 		fig = go.Figure(data=data_list, layout=layout)
@@ -388,11 +389,89 @@ def plot_timetrace(wl, wl_list, data, normalize=False, plottype="linear"):
 						type = plottype,
 					),
 					yaxis=dict(
-						title='mOD',
+						title='Δ OD',
 					)
 			   )
 		fig = go.Figure(data=data_list, layout=layout)
 		py.iplot(fig)
+
+
+def plot_spectral_cut(data, time, wavelengths, normalize=False):
+	'''
+	Input:
+		(1) Time for the spectral cut
+		(2) tree column array, 0 column contains map, 1 column contains time
+			list, 2 column contains names 
+	Output: 
+		Plot of the spectral cut
+	'''
+
+	if normalize == False:
+		if len(data) == 1:
+			ryb = [(0,0,255)]
+		else:
+			ryb = sns.color_palette('RdBu_r', len(data))
+		data_list = []
+		for i in range(0,len(data)):
+			c = "rgb"+str(ryb[i])
+			trace = go.Scatter(
+						x = wavelengths,
+						y = data[i][0][:,find_closest_index(data[i][1], time)],
+						mode = 'lines',
+						name = str(data[i][2]),
+						line = dict(
+								color =  (c),
+								)
+					)
+			data_list.append(trace)
+				
+		layout = go.Layout(
+					showlegend=True,
+					title = "Spectral cut at "+ str(time) + "ps",
+					xaxis=dict(
+						title='wavelength / nm',
+					),
+					yaxis=dict(
+						title='Δ OD',
+					)
+			   )
+		fig = go.Figure(data=data_list, layout=layout)
+		py.iplot(fig)
+
+	else:
+		if len(data) == 1:
+			ryb = [(0,0,255)]
+		else:
+			ryb = sns.color_palette('RdBu_r', len(data))
+		data_list = []
+		for i in range(0,len(data)):
+			c = "rgb"+str(ryb[i])
+			trace = go.Scatter(
+						x = wavelengths,
+						y = data[i][0][:,find_closest_index(data[i][1], time)]/np.max(data[i][0][:, find_closest_index(data[i][1], time)] ),
+						mode = 'lines',
+						name = str(data[i][2]),
+						line = dict(
+								color =  (c),
+								)
+					)
+			data_list.append(trace)
+				
+		layout = go.Layout(
+					showlegend=True,
+					title = "Spectral cut at "+ str(time) + "ps",
+					xaxis=dict(
+						title='wavelength / nm',
+					),
+					yaxis=dict(
+						title='normalized Δ OD',
+					)
+			   )
+		fig = go.Figure(data=data_list, layout=layout)
+		py.iplot(fig)
+
+	
+			
 
 
 '''
