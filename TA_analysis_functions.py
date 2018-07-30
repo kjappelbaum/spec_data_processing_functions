@@ -64,14 +64,22 @@ AUXILLARY, GENERAL FUNCTIONS
 '''
 def find_closest_index(your_list, your_value):
 	'''
-	Find the index closest to the value
+	Find the index closest to the value.
+
+	Input: 
+		(1) List
+		(2) Value
+
+	Output: 
+		(1) Index
 	'''
 	idx = (np.abs(your_list - your_value)).argmin()
 	return idx
 
 def angle_to_wl(angle):
 	'''
-	Change according to your fitting function
+	Change according to your fitting function. Converts BBO angle into 
+	pump wavelength.
 	'''
 	return 0.0667*angle**2 -11.9*angle + 778.8
 
@@ -84,13 +92,28 @@ IMPORT FUNCTIONS
 def import_OD(path, pattern, numberpixel=512, debug=False):
 	'''
 	Function that imports OD data at path, which is identified by
-	the regular expression specified in pattern and saves everything
-	as a dataframe in the list specified under save_list
-	as the function DO NOT create global variables, you have to define 
-	the lists before the function call. 
-	
+	the regular expression specified in pattern.
 	Keeping track of the filenames is recommended, ordered import 
 	pivotal for correct processing of anisotropy measurments
+
+	Input:
+		(1) Path, e.g. path = "Mypath/"
+		(2) Regular expression to find the correct files, e.g.
+		pattern = r'\w+\d+aa-\d+\.dat'
+		(3) Number of pixels of your detector, default is 512.
+		(4) Debugging options, if one éncounters problems 
+		(e.g. with the regular expression) one can use this 
+		to print the found file names 
+
+	Output: 
+		Call the function appropiatly, i.e. 
+		filename_list, save_list, save_wl = import_OD(arguments...)
+
+		(1) Ordered list of filenames
+		(2) Ordered list with the scans found in the directory
+		(3) Wavelengths (probe) found in the scan files. 
+		Assummes currently that this is the same for all the imported 
+		scans. 
 	'''
 	filename_list = []
 	assert  (numberpixel > 0), "Where are your pixels?"
@@ -116,9 +139,7 @@ def import_OD(path, pattern, numberpixel=512, debug=False):
 def import_delay(path, pattern, debug=False):
 	'''
 	Function that imports thr delay data at path, which is identified by
-	the regular expression specified in pattern and saves everything
-	as a dataframe in the list specified under save_list. 
-	You have to define the lists before the function call. 
+	the regular expression specified in pattern.
 	
 	Keeping track of the filenames is recommended. 
 	'''
@@ -144,7 +165,10 @@ def import_delay(path, pattern, debug=False):
 def split_anisotropy(input_list):
 	'''
 	Takes a list of scans which were performed with alternating 
-	polarizations and returns two lists, each for a different polarizaion. 
+	polarizations and returns two lists, each for a different polarizations.
+	Useful to check if there is some photoselection effect. 
+
+	Might be applied after preprocessing and creation of averaged maps.  
 	'''
 	print("Check it also on the filenames to make sure that the order of import was correct")
 	pol_a = []
@@ -489,6 +513,14 @@ def svd_noise_corr(input_maps, threshold=15):
 		
 	Output: 
 		(1) Map with hopefully less noise 
+
+	Reference:
+		1. van Stokkum, I. H. M., Larsen, D. S. & van Grondelle, 
+		R. Global and target analysis of time-resolved spectra. 
+		Biochim. Biophys. Acta - Bioenerg. 1657, 82–104 (2004).
+		2. 1. van Stokkum, I. H. M., Larsen, D. S. & van Grondelle, R. 
+		Global and target analysis of time-resolved spectra. 
+		Biochim. Biophys. Acta - Bioenerg. 1657, 82–104 (2004).
 	'''
 	
 	noise_anal_array= []
@@ -542,6 +574,7 @@ def baseline_corr(scan_map, wavelength_list, x_min, x_max, wl_min, wl_max):
 
 def automatic_parity_corr(maps,x_window=0.01,z_percentage=0.5):
 	'''
+	(EXPERIMENTAL)
 	slow algorithm that needs revision and aims to correct 
 	parity flips of the detector by comparing the sign of the signal
 	at one pixel with. This can also lead to smoothening.  
@@ -724,6 +757,10 @@ def create_optimus_file(input_map,times,wavelength,outputname):
 		
 	Ouput: 
 		.ana file for optimus
+
+	Reference:
+		1. Slavov, C., Hartmann, H. & Wachtveitl, J. Implementation and Evaluation of Data Analysis
+		 Strategies for Time-Resolved Optical Spectroscopy. Anal. Chem. 87, 2328–2336 (2015).
 	'''
 	assert (len(wavelength) == input_map.shape[0]), "Somehow the shape of the map is not consistent with the number of wavelengths" 
 	assert (len(times) == input_map.shape[1]), "Somehow the shape of the map is not consistent with the number of delays" 
@@ -768,6 +805,11 @@ def create_pyldm_file(input_map, times, wavelength, outputname):
 		
 	Ouput: 
 		PyLDM input file (.txt ending)
+
+	Reference:
+		1. Dorlhiac, G. F., Fare, C. & van Thor, J. J. PyLDM - 
+		An open source package for lifetime density analysis of time-resolved spectroscopic data. 
+		PLoS Comput. Biol. 13, 1–15 (2017).
 	'''
 	
 	assert (len(wavelength) == input_map.shape[0]), "Somehow the shape of the map is not consistent with the number of wavelengths" 
