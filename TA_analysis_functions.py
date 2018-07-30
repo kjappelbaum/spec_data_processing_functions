@@ -56,7 +56,20 @@ numberpixel = 512
 c = 299792458
 conversion =  0.14997 #delay to ps 
 
+usage = """ This is a collection of functions that might be helpful 
+			in your data processing. Suggested usage:
+			(1) import_OD() and import_delay()
+			(2) run import checks
+			(3) reshape into maps
+			(4) plot a map, select area for baseline substraction and substract base line there
+			(5) do SVD noise correction 
+			(6) do GVD correction (check the units of the delays in your files and 
+				use a appropiate conversion, e.g. via length and speed of light)
+			(7) plot corrected map, timetraces and spectral cuts for first impressions 
+			(8) do global analysis (to be implemented) or export into Optimus or PyLDM for 
+				global and target analysis or LDA. """
 
+print(usage)
 
 
 '''
