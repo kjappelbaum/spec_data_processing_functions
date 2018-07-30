@@ -582,6 +582,26 @@ def average_scan(input_maps):
 	return np.mean(input_maps,axis=0)
 
 def baseline_corr(scan_map, wavelength_list, x_min, x_max, wl_min, wl_max):
+	'''
+	Plot a map and look for a region before time zero. Remember the 
+	coordinates of this region. This function averages the map in this region
+	and substracts it from the map and in this way performs the simplest
+	possible basline correction. 
+
+	The order x_min/x_max and wl_min/wl_max does not matter. The function 
+	automatically finds which is the correct upper/lower bound. 
+
+	Input: 
+		(1) Map 
+		(2) List of wavelengths
+		(3) Minimum in time 
+		(4) Maximum in time
+		(5) Minimum in wavelength
+		(6) Maximum in wavelength
+
+	Output: 
+		baseline corrected map
+	'''
 		y_min = find_closest_index(wavelength_list, wl_min)
 		y_max = find_closest_index(wavelength_list, wl_max)
 		
@@ -626,6 +646,37 @@ def automatic_parity_corr(maps,x_window=0.01,z_percentage=0.5):
 	return meas_parity_corr
 
 
+def manual_parity_corr(map, wl, wl_list, t_lim, sign=-1):
+	'''
+	This version of the parity correction assumes that you know (i.e. by looking at the map)
+	the sign of the signal at a paritcular wavelength. If at some time of the scan the sign
+	flips due to a parity flip of the detector, this function will correct for it up to a time which you specify. 
+
+	Input: 
+		(1) Map 
+		(2) Wavelength at which parity correction should be performed 
+		(3) Minimum time (you will rather get problems before time zero) given as a index
+		(4) Sign of the signal at the particular wavelength, encodeding 1 = positive, -1 = negative. 
+			In the default settings a negative bleach signal is assumed. 
+		(5) List of wavelengths 
+
+	Does:
+		Scans at the particular timetrace the sign of the signal and reverses it for all wavelengths
+		at that time if it is not equal to the sign provided in the function call
+
+	Output: 
+		Parity corrected map
+	'''
+
+	wl_idx = find_closest_index(wl_list, wl)
+	parity_corr_map = np.zeros(map.shape)
+	for i in range(0,t_lim):
+		if ((map[wl_idx,i] > 0 & sign==-1) | (map[wl_idx,i] < 0 & sign==+1)):
+			parity_corr_map[:,i] = map[:,i] * (-1)
+		else: 
+			parity_corr_map[:,i] = map[:,i]
+			
+	return  parity_corr_map
 
 
 '''
@@ -857,7 +908,6 @@ def create_pyldm_file(input_map, times, wavelength, outputname):
 SPECIAL CASES
 '''
 
-
 def fit_IRF(scan_map, delays, wavelengths, starting_values = [0.003, 1843, 0.55]):
 	'''
 	Assuming that you measure e.g. the two-photon absorption 
@@ -875,6 +925,10 @@ def fit_IRF(scan_map, delays, wavelengths, starting_values = [0.003, 1843, 0.55]
 		pre-factor (amp), center (cen) (depends of course
 		of the units of delay you choose), width (wid):
 		(amp / (np.sqrt(2*np.pi) * wid)) * np.exp(-(x-cen)**2 / (2*wid**2) )
+
+	Output:
+		The function will create a plot of the IRF as a function of probe wavelength
+		and return a list with the FWHMs. 
 	'''
 
 	widths = []
